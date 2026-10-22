@@ -1,0 +1,15 @@
+{
+  "name": "messenger-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "E2E relay: public keys + public profiles on disk, ciphertext only in RAM",
+  "main": "server.js",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test.js"
+  },
+  "dependencies": {
+    "ws": "8.18.3"
+  }
+}

@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Payam" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+    </style>
+    <color name="bg">#FFFFFFFF</color>
+    <color name="ic_bg">#FF2AABEE</color>
+</resources>

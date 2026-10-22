@@ -1,0 +1,17 @@
+# secrets — never publish
+keystore.properties
+*.jks
+*.keystore
+local.properties
+
+# build output
+*.apk
+*.aab
+.gradle/
+build/
+android/app/src/main/jniLibs/
+android/crypto-rs/target/
+server/node_modules/
+server/data/
+.idea/
+*.iml
