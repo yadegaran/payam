@@ -25,6 +25,8 @@ android {
         versionName = project.findProperty("payam.versionName") as String? ?: "1.0"
         // Pre-filled server address on the sign-up screen (`-Ppayam.server=https://chat.example.ir`).
         buildConfigField("String", "DEFAULT_SERVER", "\"${project.findProperty("payam.server") ?: "https://"}\"")
+        // GitHub "owner/repo" whose Releases the in-app updater checks; forks set their own, "" disables it.
+        buildConfigField("String", "UPDATE_REPO", "\"${project.findProperty("payam.updateRepo") ?: "yadegaran/payam"}\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 

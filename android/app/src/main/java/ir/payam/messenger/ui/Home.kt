@@ -113,6 +113,8 @@ fun HomeScreen(acc: Acc, archive: Boolean, act: MainActivity) {
     val invite = pendingInvite.value
     LaunchedEffect(invite) { if (invite != null) newChat = true }
 
+    LaunchedEffect(Unit) { ir.payam.messenger.core.Updater.check() }
+
     LaunchedEffect(Unit) {
         val pm = ctx.getSystemService(PowerManager::class.java)
         if (!Settings.batteryAsked && !pm.isIgnoringBatteryOptimizations(ctx.packageName)) {
@@ -186,6 +188,7 @@ fun HomeScreen(acc: Acc, archive: Boolean, act: MainActivity) {
                     }
                 }
                 LazyColumn(Modifier.fillMaxSize()) {
+                    if (!archive) item { UpdateCard(act) }
                     if (!archive && folder == null && chats.any { it.archived }) item {
                         Row(Modifier.fillMaxWidth().clickable { Nav.go(Scr.Archive) }.padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Archive, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)

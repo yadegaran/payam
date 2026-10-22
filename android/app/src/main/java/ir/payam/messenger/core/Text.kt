@@ -39,6 +39,11 @@ object Settings {
     var notifPreview: Boolean get() = p.getBoolean("notifPreview", false); set(v) = put("notifPreview", v)
     var linkPreview: Boolean get() = p.getBoolean("linkPreview", false); set(v) = put("linkPreview", v)
     var batteryAsked: Boolean get() = p.getBoolean("batteryAsked", false); set(v) = put("batteryAsked", v)
+    /** Daily check of GitHub Releases for a newer app (reveals only our IP to GitHub). */
+    var autoUpdate: Boolean get() = p.getBoolean("autoUpdate", true); set(v) = put("autoUpdate", v)
+    var lastUpdateCheck: Long get() = p.getLong("lastUpdateCheck", 0); set(v) = put("lastUpdateCheck", v)
+    /** Version the user dismissed with "later" — no banner for it again. */
+    var skipUpdate: String get() = p.getString("skipUpdate", "")!!; set(v) = put("skipUpdate", v)
 
     /** kind: photo|video|voice|file — wifi=true for Wi-Fi, false for mobile data. */
     fun autoDl(kind: String, wifi: Boolean): Boolean =

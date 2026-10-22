@@ -161,6 +161,16 @@ fun SettingsScreen(acc: Acc, act: MainActivity) {
 
             Section(L("درباره", "About"))
             Text(L("نسخه ", "Version ") + BuildConfig.VERSION_NAME, Modifier.padding(16.dp, 4.dp))
+            if (ir.payam.messenger.core.Updater.enabled) {
+                Toggle(L("بررسی خودکار نسخه جدید", "Check for updates automatically"),
+                    L("روزی یک بار از GitHub؛ فقط IP شما را می‌بیند", "Once a day from GitHub; it only sees your IP"), Settings.autoUpdate) { Settings.autoUpdate = it }
+                Item(L("بررسی نسخه جدید", "Check for updates")) {
+                    scope.launch {
+                        if (ir.payam.messenger.core.Updater.check(force = true) == null) toast(ctx, L("آخرین نسخه را دارید", "You have the latest version"))
+                    }
+                }
+                UpdateCard(act, inSettings = true)
+            }
             Text(L("اثر انگشت امضای برنامه (برای اطمینان از اصل بودن APK):", "App signing fingerprint (verify your APK is genuine):"), Modifier.padding(16.dp, 4.dp), fontSize = 13.sp)
             Text(apkFingerprint(ctx), Modifier.padding(16.dp, 0.dp, 16.dp, 24.dp), fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }

@@ -126,7 +126,8 @@ fun Bubble(
             .background(if (selected) Accent.copy(alpha = 0.25f) else if (highlight) Accent.copy(alpha = 0.15f) else Color.Transparent)
             .combinedClickable(onLongClick = onLong, onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 2.dp),
-        horizontalArrangement = if (m.out) Arrangement.End else Arrangement.Start,
+        // Own messages on the right, the other side's on the left — regardless of RTL/LTR.
+        horizontalArrangement = if (m.out) Arrangement.Absolute.Right else Arrangement.Absolute.Left,
     ) {
         Column(
             Modifier.widthIn(max = 310.dp)

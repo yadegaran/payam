@@ -5,6 +5,7 @@ import ir.payam.messenger.core.FileGuard
 import ir.payam.messenger.core.Ids
 import ir.payam.messenger.core.Md
 import ir.payam.messenger.core.Pw
+import ir.payam.messenger.core.isNewerVersion
 import ir.payam.messenger.ui.Invite
 import ir.payam.messenger.ui.inviteFromAppLink
 import ir.payam.messenger.ui.parseInvite
@@ -106,5 +107,14 @@ class CoreTest {
         // the result round-trips through the normal invite parser
         assertEquals(Invite("ab12cd34", fp, "chat.example.com"),
             parseInvite(inviteFromAppLink("payam://invite?u=ab12cd34&s=https%3A%2F%2Fchat.example.com&fp=$fp")!!))
+    }
+
+    @Test fun updateVersionComparison() {
+        assertTrue(isNewerVersion("v1.0.2", "1.0.1"))
+        assertTrue(isNewerVersion("v1.10.0", "1.9.9"))   // numeric, not alphabetical
+        assertTrue(isNewerVersion("2.0", "1.9.9"))
+        assertFalse(isNewerVersion("v1.0.1", "1.0.1"))
+        assertFalse(isNewerVersion("v1.0.0", "1.0.1"))
+        assertFalse(isNewerVersion("v1.0.1", "1.0.1-dev"))
     }
 }
