@@ -169,3 +169,14 @@ test('signatures made by vodozemac on the phone verify here', () => {
   assert.equal(verifySig(ed, 'auth:nonce124', sig), false);
   assert.equal(usernameOf(ed, Buffer.from('2nhEbF7O7STMmeMoCHh/JwnQI9q82Gx1MlfRRvOVc3o=', 'base64')), 'j2g1433s');
 });
+
+test('invite page hands off to the app (payam:// / intent://) and never sees the fingerprint', async () => {
+  await new Promise((r) => (srv.server.listening ? r() : srv.server.once('listening', r)));
+  const res = await fetch(`http://${base()}/u/ab12cd34`);
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /payam:\/\/invite\?u=ab12cd34/);
+  assert.match(html, /intent:\/\/invite\?/);
+  assert.match(html, /package=ir\.payam\.messenger/);
+  assert.equal((await fetch(`http://${base()}/u/AB12CD34`)).status, 404); // only valid usernames are echoed
+});

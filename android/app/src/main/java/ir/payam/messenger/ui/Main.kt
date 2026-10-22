@@ -132,7 +132,11 @@ class MainActivity : FragmentActivity() {
             Nav.reset()
             Nav.go(Scr.ChatS(peer))
         }
-        if (i.action == Intent.ACTION_VIEW) i.dataString?.let { pendingInvite.value = it; Nav.reset() }
+        if (i.action == Intent.ACTION_VIEW) {
+            val link = i.dataString ?: return
+            pendingInvite.value = if (link.startsWith("payam:")) inviteFromAppLink(link) ?: return else link
+            Nav.reset()
+        }
     }
 
     fun biometric(onOk: () -> Unit) {

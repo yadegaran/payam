@@ -6,6 +6,7 @@ import ir.payam.messenger.core.Ids
 import ir.payam.messenger.core.Md
 import ir.payam.messenger.core.Pw
 import ir.payam.messenger.ui.Invite
+import ir.payam.messenger.ui.inviteFromAppLink
 import ir.payam.messenger.ui.parseInvite
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -90,5 +91,20 @@ class CoreTest {
         assertEquals(Invite("ab12cd34", fp, "chat.example.com"), parseInvite("https://Chat.Example.com/u/ab12cd34#$fp"))
         assertEquals(Invite("ab12cd34", null, null), parseInvite(" AB12CD34 "))
         assertEquals(null, parseInvite("hello"))
+    }
+
+    @Test fun appLinkFromInvitePage() {
+        val fp = "cd".repeat(32)
+        assertEquals("https://chat.example.com/u/ab12cd34#$fp",
+            inviteFromAppLink("payam://invite?u=ab12cd34&s=https%3A%2F%2Fchat.example.com&fp=$fp"))
+        assertEquals("https://chat.example.com:8443/u/ab12cd34",
+            inviteFromAppLink("payam://invite?u=ab12cd34&s=https%3A%2F%2Fchat.example.com%3A8443"))
+        // malformed / hostile input is ignored
+        assertEquals(null, inviteFromAppLink("payam://invite?u=../../x&s=https%3A%2F%2Fa.b"))
+        assertEquals(null, inviteFromAppLink("payam://invite?u=ab12cd34&s=javascript%3Aalert(1)"))
+        assertEquals(null, inviteFromAppLink("payam://other?u=ab12cd34&s=https%3A%2F%2Fa.b"))
+        // the result round-trips through the normal invite parser
+        assertEquals(Invite("ab12cd34", fp, "chat.example.com"),
+            parseInvite(inviteFromAppLink("payam://invite?u=ab12cd34&s=https%3A%2F%2Fchat.example.com&fp=$fp")!!))
     }
 }

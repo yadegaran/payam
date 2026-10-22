@@ -131,6 +131,23 @@ fun parseInvite(s: String): Invite? {
     return Invite(m.groupValues[2], m.groupValues[3].ifEmpty { null }, m.groupValues[1].lowercase().ifEmpty { null })
 }
 
+/**
+ * The invite web page hands off with payam://invite?u=<user>&s=<server origin>&fp=<fingerprint>
+ * (see server.js invitePage). Turns it back into the regular https invite link; null if malformed.
+ */
+fun inviteFromAppLink(link: String): String? {
+    val uri = runCatching { java.net.URI(link) }.getOrNull() ?: return null
+    if (uri.scheme != "payam" || uri.host != "invite") return null
+    val q = (uri.rawQuery ?: return null).split('&').mapNotNull {
+        val kv = it.split('=', limit = 2)
+        if (kv.size == 2) kv[0] to java.net.URLDecoder.decode(kv[1], "UTF-8") else null
+    }.toMap()
+    val user = q["u"]?.takeIf { Regex("^[0-9a-z]{8}$").matches(it) } ?: return null
+    val server = q["s"]?.takeIf { Regex("^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$").matches(it) } ?: return null
+    val fp = q["fp"]?.takeIf { Regex("^[0-9a-f]{64}$").matches(it) }
+    return "$server/u/$user" + (fp?.let { "#$it" } ?: "")
+}
+
 /** Each self-hosted server is its own world: an invite only works on the server it came from. */
 fun Acc.isOtherServer(inv: Invite) = inv.host != null && inv.host != server.substringAfter("://").substringBefore('/').lowercase()
 

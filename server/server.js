@@ -25,6 +25,39 @@ function usernameOf(ed, curve) {
   return (h.readBigUInt64BE(0) % 36n ** 8n).toString(36).padStart(8, '0');
 }
 
+// Android only opens https links in an app after domain verification, which a
+// self-hosted server can't have for a shared app. So the invite page hands off to
+// the app with its own scheme (payam://invite?u=&s=&fp=); on Android an intent://
+// URL also falls back to downloading the app when it isn't installed.
+// `user` is already validated against USER_RE; the fingerprint stays client-side.
+function invitePage(user) {
+  return `<!doctype html><html dir="rtl" lang="fa"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>دعوت به پیام</title><style>
+body{font-family:system-ui,Tahoma,sans-serif;margin:0;padding:48px 16px;text-align:center;background:#f4f6f8;color:#17212b}
+.card{max-width:420px;margin:auto;background:#fff;border-radius:16px;padding:28px 20px;box-shadow:0 2px 12px #0001}
+.u{font:700 28px monospace;letter-spacing:2px;margin:6px 0 22px}
+a.btn{display:block;padding:14px;border-radius:12px;background:#2aabee;color:#fff;text-decoration:none;font-weight:700;margin:10px 0}
+a.alt{background:#e8edf2;color:#17212b}p.s{color:#66727f;font-size:14px;line-height:1.7}
+@media (prefers-color-scheme:dark){body{background:#0e1621;color:#e9eef3}.card{background:#17212b}a.alt{background:#242f3d;color:#e9eef3}}
+</style></head><body><div class="card">
+<p>دعوت به گفتگوی امن با</p><div class="u">${user}</div>
+<a class="btn" id="open" href="payam://invite?u=${user}">باز کردن در برنامه پیام</a>
+<a class="btn alt" href="/app.apk">دانلود برنامه</a>
+<p class="s">اگر برنامه را ندارید، اول آن را نصب کنید و بعد دوباره روی لینک دعوت بزنید.</p>
+</div><script>
+(function () {
+  var fp = location.hash.slice(1); if (!/^[0-9a-f]{64}$/.test(fp)) fp = '';
+  var q = 'u=${user}&s=' + encodeURIComponent(location.origin) + (fp ? '&fp=' + fp : '');
+  var a = document.getElementById('open');
+  a.href = /Android/i.test(navigator.userAgent)
+    ? 'intent://invite?' + q + '#Intent;scheme=payam;package=ir.payam.messenger;S.browser_fallback_url=' +
+      encodeURIComponent(location.origin + '/app.apk') + ';end'
+    : 'payam://invite?' + q;
+})();
+</script></body></html>`;
+}
+
 function verifySig(edRaw, msg, sig) {
   try {
     const key = crypto.createPublicKey({ key: Buffer.concat([ED_SPKI, edRaw]), format: 'der', type: 'spki' });
@@ -209,11 +242,7 @@ function start({ port = 8080, host = '127.0.0.1', dbPath = 'data/users.db', maxR
 
     // Invite landing page. The #fingerprint part of the link never reaches us.
     if (parts[0] === 'u' && parts.length === 2 && USER_RE.test(parts[1]) && req.method === 'GET') {
-      return end(res, 200, `<!doctype html><html dir="rtl" lang="fa"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>دعوت</title>
-<body style="font-family:sans-serif;text-align:center;padding:48px 16px">
-<p>برای گفتگو با <b>${parts[1]}</b> برنامه را نصب کنید و دوباره روی این لینک بزنید.</p>
-<p><a href="/app.apk">دانلود برنامه</a></p></body></html>`, 'text/html; charset=utf-8');
+      return end(res, 200, invitePage(parts[1]), 'text/html; charset=utf-8');
     }
     end(res, 404);
   });

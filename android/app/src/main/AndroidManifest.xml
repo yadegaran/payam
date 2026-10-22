@@ -44,6 +44,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="*" android:pathPrefix="/u/" />
             </intent-filter>
+            <!-- Hand-off from the invite page: payam://invite?u=<user>&s=<server>&fp=<fingerprint>.
+                 Unverified https links open in the browser on Android 12+, a custom scheme always reaches the app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="payam" android:host="invite" />
+            </intent-filter>
         </activity>
 
         <service
