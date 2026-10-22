@@ -267,6 +267,7 @@ class Engine(private val acc: Acc) {
     private suspend fun receive(m: JSONObject) {
         val from = m.getString("from")
         val q = m.optString("q")
+        if (!USER_RE.matches(from)) { ack(q); return } // the server is untrusted too
         val seenKey = from + ":" + m.optString("id")
         if (q.isNotEmpty() && d.seen(seenKey) > 0) { ack(q); return }
         val c = d.contact(from) ?: when (val r = lookup(from)) {
@@ -298,7 +299,8 @@ class Engine(private val acc: Acc) {
         val now = System.currentTimeMillis()
         when (j.optString("t")) {
             "msg" -> {
-                val id = j.optString("id").take(64).ifEmpty { return }
+                // Peer-chosen id: strict format, and never used to build file paths.
+                val id = j.optString("id").takeIf { ID_RE.matches(it) } ?: return
                 if (d.msg(from, id) != null) return
                 val type = j.optString("type").takeIf { it in TYPES } ?: return
                 val media = j.optJSONObject("media")?.let { src ->
@@ -657,7 +659,9 @@ class Engine(private val acc: Acc) {
                 d.putMsg(cur.copy(media = media.put("blocked", verdict.reason).toString()))
                 return false
             }
-            val dst = File(acc.mediaDir, m.id + "." + verdict.name.substringAfterLast('.', "bin"))
+            // Local name is ours (random), never derived from anything the peer sent.
+            val ext = verdict.name.substringAfterLast('.', "bin").filter { it.isLetterOrDigit() }.take(8).ifEmpty { "bin" }
+            val dst = File(acc.mediaDir, Ids.newId() + "." + ext)
             if (!plain.renameTo(dst)) { plain.copyTo(dst, true); plain.delete() }
             d.putMsg(cur.copy(media = media.put("path", dst.path).put("mime", verdict.mime).toString()))
             return true
@@ -720,5 +724,7 @@ class Engine(private val acc: Acc) {
 
     companion object {
         const val RESET = "__reset__"
+        private val ID_RE = Regex("^[0-9A-Za-z_-]{1,64}$")
+        private val USER_RE = Regex("^[0-9a-z]{8}$")
     }
 }

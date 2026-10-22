@@ -74,6 +74,9 @@ val cargoBuild by tasks.registering(Exec::class) {
     val cargo = File(System.getProperty("user.home"), ".cargo/bin/cargo").path
     workingDir = crate
     environment("ANDROID_NDK_HOME", ndkDir.path)
+    // Rust embeds source paths in panic messages; don't ship the builder's home/user name in the .so.
+    val cargoHome = System.getenv("CARGO_HOME") ?: File(System.getProperty("user.home"), ".cargo").path
+    environment("RUSTFLAGS", "--remap-path-prefix=$cargoHome=/cargo --remap-path-prefix=${crate.path}=/payam")
     commandLine(
         cargo, "ndk", "--platform", "26",
         "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86_64",
