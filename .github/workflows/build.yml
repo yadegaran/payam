@@ -1,0 +1,111 @@
+# Tests everything and builds the Android APK.
+# - every push / PR: tests + APK as a downloadable workflow artifact
+# - tag "v1.2.3": signed release APK published to GitHub Releases as payam.apk
+#   (needs repo secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD; see README)
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # publish releases on tags
+
+jobs:
+  server:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci && node --test test.js
+        working-directory: server
+      - run: bash -n install.sh
+
+  android:
+    runs-on: ubuntu-24.04
+    env:
+      NDK_VERSION: 28.2.13676358
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: android/crypto-rs
+          cache-bin: true
+
+      - name: Rust toolchain
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+          command -v cargo-ndk >/dev/null || cargo install cargo-ndk --locked
+
+      - name: Crypto tests
+        run: cargo test --release
+        working-directory: android/crypto-rs
+
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$RUNNER_TEMP/release.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+            echo "SIGNED=1" >> "$GITHUB_ENV"
+          else
+            echo "No signing secrets: building a debug APK."
+          fi
+
+      - name: Unit tests and APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || VERSION="0.0.${{ github.run_number }}-dev"
+          if [ "${SIGNED:-}" = 1 ]; then TASK=assembleRelease; OUT=release/app-release.apk; else TASK=assembleDebug; OUT=debug/app-debug.apk; fi
+          ./gradlew --no-daemon :app:testDebugUnitTest ":app:$TASK" \
+            -Ppayam.versionName="$VERSION" -Ppayam.versionCode=${{ github.run_number }}
+          cp "app/build/outputs/apk/$OUT" ../payam.apk
+          cd .. && sha256sum payam.apk | cut -d' ' -f1 > payam.apk.sha256
+          echo "APK SHA-256: $(cat payam.apk.sha256)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: payam-apk
+          path: |
+            payam.apk
+            payam.apk.sha256
+
+      - name: Refuse to release an unsigned build
+        if: startsWith(github.ref, 'refs/tags/v') && env.SIGNED != '1'
+        run: |
+          echo "::error::Tag builds need the signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)."
+          exit 1
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v') && env.SIGNED == '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            payam.apk
+            payam.apk.sha256
+          generate_release_notes: true

@@ -111,6 +111,25 @@ keyPassword=...
 ./gradlew :app:assembleRelease -Ppayam.server=https://chat.example.com   # با آدرس سرور از پیش پرشده
 ```
 
+## ساخت خودکار APK با GitHub Actions
+
+فایل `.github/workflows/build.yml` با هر push همه تست‌ها را اجرا می‌کند و APK را می‌سازد. فایل ساخته‌شده از صفحه همان اجرا (Actions) در بخش Artifacts قابل دانلود است.
+
+**انتشار نسخه امضاشده:** چهار secret زیر را در **Settings → Secrets and variables → Actions** تعریف کنید و بعد یک تگ بزنید:
+
+| Secret | مقدار |
+|---|---|
+| `KEYSTORE_BASE64` | فایل keystore به‌صورت base64: `base64 -w0 my-release.jks` |
+| `KEYSTORE_PASSWORD` | رمز keystore |
+| `KEY_ALIAS` | نام کلید (مثلاً `payam`) |
+| `KEY_PASSWORD` | رمز کلید |
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+با زدن تگ، APK امضاشده با نام `payam.apk` در Releases منتشر می‌شود و نصاب سرور هم آن را از همان‌جا برمی‌دارد. شماره نسخه از روی تگ گذاشته می‌شود. بدون این secretها، APK نسخه debug ساخته می‌شود و هیچ نسخه‌ای منتشر نمی‌شود.
+
 ## تست‌ها
 
 ```bash

@@ -1,11 +1,16 @@
+// Google Maven is filtered from Iran, so Iranian mirrors come first locally.
+// On CI (GitHub runners abroad) they are skipped: some of them refuse foreign IPs.
+val iranMirrors = System.getenv("CI") == null
+
 pluginManagement {
     repositories {
-        // Google Maven is filtered from Iran, so Iranian mirrors come first; elsewhere they just fall through to google().
-        maven {
-            url = uri("https://maven.myket.ir")
-            content { excludeModuleByRegex(".*", ".*\\.gradle\\.plugin") }
+        if (System.getenv("CI") == null) {
+            maven {
+                url = uri("https://maven.myket.ir")
+                content { excludeModuleByRegex(".*", ".*\\.gradle\\.plugin") }
+            }
+            maven { url = uri("https://en-mirror.ir") }
         }
-        maven { url = uri("https://en-mirror.ir") }
         google()
         gradlePluginPortal()
         mavenCentral()
@@ -17,8 +22,10 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven { url = uri("https://maven.myket.ir") }
-        maven { url = uri("https://en-mirror.ir") }
+        if (iranMirrors) {
+            maven { url = uri("https://maven.myket.ir") }
+            maven { url = uri("https://en-mirror.ir") }
+        }
         google()
         mavenCentral()
     }

@@ -20,8 +20,9 @@ android {
         applicationId = "ir.payam.messenger"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // CI passes these from the tag / run number; local builds stay 1 / 1.0.
+        versionCode = (project.findProperty("payam.versionCode") as String?)?.toInt() ?: 1
+        versionName = project.findProperty("payam.versionName") as String? ?: "1.0"
         // Pre-filled server address on the sign-up screen (`-Ppayam.server=https://chat.example.ir`).
         buildConfigField("String", "DEFAULT_SERVER", "\"${project.findProperty("payam.server") ?: "https://"}\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
@@ -67,11 +68,13 @@ android {
 // Rust crypto (vodozemac) → src/main/jniLibs/<abi>/libpayamcrypto.so
 val cargoBuild by tasks.registering(Exec::class) {
     val crate = rootProject.file("crypto-rs")
-    val sdk = Properties().apply { rootProject.file("local.properties").inputStream().use { load(it) } }
-        .getProperty("sdk.dir")
-    val ndkDir = File(sdk, "ndk").listFiles()?.filter { it.isDirectory }?.maxByOrNull { it.name }
+    val localProps = rootProject.file("local.properties")
+    val sdk = (if (localProps.exists()) Properties().apply { localProps.inputStream().use { load(it) } }.getProperty("sdk.dir") else null)
+        ?: System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT") ?: error("Android SDK not found (local.properties or ANDROID_HOME)")
+    val ndkDir = System.getenv("ANDROID_NDK_HOME")?.let(::File)
+        ?: File(sdk, "ndk").listFiles()?.filter { it.isDirectory }?.maxByOrNull { it.name }
         ?: error("No NDK under $sdk/ndk")
-    val cargo = File(System.getProperty("user.home"), ".cargo/bin/cargo").path
+    val cargo = File(System.getenv("CARGO_HOME") ?: File(System.getProperty("user.home"), ".cargo").path, "bin/cargo").path
     workingDir = crate
     environment("ANDROID_NDK_HOME", ndkDir.path)
     // Rust embeds source paths in panic messages; don't ship the builder's home/user name in the .so.
